@@ -177,9 +177,12 @@
   // ---------- Config ----------
   var CATS = {
     tarea:     { label: "Tarea",      bg: "var(--navy)",        fg: "#fff",       border: "var(--navy)" },
+    info:      { label: "Info",       bg: "#fff",               fg: "var(--navy)",border: "var(--navy-soft)" },
     cita:      { label: "Cita",       bg: "var(--yellow)",      fg: "var(--navy)",border: "var(--yellow)" },
+    reunion:   { label: "Reunión",    bg: "var(--navy-soft)",   fg: "#fff",       border: "var(--navy-soft)" },
     promocion: { label: "Promoción",  bg: "#fff",               fg: "var(--navy)",border: "var(--navy)" },
-    reduccion: { label: "Reducción",  bg: "var(--yellow-soft)", fg: "var(--navy)",border: "var(--yellow)" }
+    reduccion: { label: "Reducción",  bg: "var(--yellow-soft)", fg: "var(--navy)",border: "var(--yellow)" },
+    contratos: { label: "Contratos",  bg: "var(--yellow-soft)", fg: "var(--navy)",border: "var(--navy)" }
   };
   var MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   var MESES_ABR = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
@@ -560,7 +563,7 @@
       html += '<button type="button" class="day-cell open-day' + (isToday ? ' today' : '') + '" data-date="' + key + '">' +
         '<span class="day-num">' + d + '</span>' +
         '<span class="dot-row">' +
-          evs.slice(0, 3).map(function (e) { return '<span class="dot" style="background:' + ((e.category === "cita" || e.category === "tarea") ? "var(--navy)" : "var(--yellow)") + '"></span>'; }).join("") +
+          evs.slice(0, 3).map(function (e) { return '<span class="dot" style="background:' + CATS[e.category].border + '"></span>'; }).join("") +
           (evs.length > 3 ? '<span class="dot-more">+' + (evs.length - 3) + '</span>' : '') +
         '</span>' +
       '</button>';
