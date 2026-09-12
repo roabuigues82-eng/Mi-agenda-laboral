@@ -942,6 +942,60 @@
     '</div>';
   }
 
+  var AGENDA_QUOTES = [
+    "Lo que se mide, mejora. Lo que se anota, se recuerda.",
+    "Cada semana ordenada es una semana menos improvisada.",
+    "El detalle de hoy es la comparación útil del año que viene.",
+    "Una tienda cuidada se nota en cada estantería.",
+    "Organizar es una forma silenciosa de cuidar el negocio.",
+    "Lo pequeño bien hecho sostiene lo grande.",
+    "La constancia ordena lo que la prisa desordena.",
+    "Anotar hoy ahorra explicar mañana.",
+    "El orden no se nota hasta que falta.",
+    "Cada mes cerrado bien es un mes que ya no pesa.",
+    "Se gestiona mejor lo que se escribe, no lo que se recuerda.",
+    "Un buen registro es el mejor argumento en cualquier reunión."
+  ];
+
+  function buildMonthClosePage(y, m, evByDay) {
+    var monthEvents = state.events.filter(function (e) {
+      var d = new Date(e.date + "T00:00:00");
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+
+    var counts = {};
+    Object.keys(CATS).forEach(function (k) { counts[k] = 0; });
+    var checklistTotal = 0, checklistDone = 0;
+    monthEvents.forEach(function (e) {
+      counts[e.category] = (counts[e.category] || 0) + 1;
+      (e.checklist || []).forEach(function (it) {
+        checklistTotal++;
+        if (it.done) checklistDone++;
+      });
+    });
+
+    var quote = AGENDA_QUOTES[(y * 12 + m) % AGENDA_QUOTES.length];
+
+    var statsRows = Object.keys(CATS).map(function (k) {
+      return "<tr><td>" + CATS[k].label + "</td><td>" + counts[k] + "</td></tr>";
+    }).join("");
+
+    var checklistLine = checklistTotal > 0
+      ? "<tr><td>Acciones marcadas como hechas</td><td>" + checklistDone + " / " + checklistTotal + "</td></tr>"
+      : "";
+
+    var linesHtml = "";
+    for (var i = 0; i < 10; i++) linesHtml += '<div class="note-line"></div>';
+
+    return wrapPrintPage(
+      "<h1>Cierre de " + MESES[m] + " " + y + "</h1>" +
+      '<p class="month-quote">“' + quote + '”</p>' +
+      '<table class="summary-table"><thead><tr><th>Resumen del mes</th><th>Total</th></tr></thead><tbody>' + statsRows + checklistLine + "</tbody></table>" +
+      '<p class="notes-label">Notas del mes</p>' +
+      '<div class="notes-box">' + linesHtml + "</div>"
+    );
+  }
+
   function buildMonthPrintPage(y, m, evByDay) {
     var first = new Date(y, m, 1);
     var startOffset = (first.getDay() + 6) % 7;
@@ -1013,30 +1067,33 @@
 
     var sortedEvents = state.events.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
 
-    // Group weeks under the month of their Monday, preserving chronological order
-    // of months as they first appear.
+    // Group by month (chronological, based on months that actually have events),
+    // then generate every week that touches that month — including weeks with
+    // no events yet — so the printed planner has a page per week to fill in.
     var monthOrder = [];
-    var monthGroups = {};
-    var weeksSeenPerMonth = {};
+    var monthsSeen = {};
     sortedEvents.forEach(function (e) {
-      var weekStart = getWeekDates(e.date)[0];
-      var wd = new Date(weekStart + "T00:00:00");
-      var mKey = wd.getFullYear() + "-" + pad(wd.getMonth() + 1);
-      if (!monthGroups[mKey]) {
-        monthGroups[mKey] = { y: wd.getFullYear(), m: wd.getMonth(), weeks: [] };
-        weeksSeenPerMonth[mKey] = {};
-        monthOrder.push(mKey);
-      }
-      if (!weeksSeenPerMonth[mKey][weekStart]) {
-        weeksSeenPerMonth[mKey][weekStart] = true;
-        monthGroups[mKey].weeks.push(weekStart);
-      }
+      var d = new Date(e.date + "T00:00:00");
+      var mKey = d.getFullYear() + "-" + pad(d.getMonth() + 1);
+      if (!monthsSeen[mKey]) { monthsSeen[mKey] = { y: d.getFullYear(), m: d.getMonth() }; monthOrder.push(mKey); }
     });
 
     var pages = monthOrder.map(function (mKey) {
-      var g = monthGroups[mKey];
+      var g = monthsSeen[mKey];
+      var lastDay = new Date(g.y, g.m + 1, 0).getDate();
+      var firstOfMonth = toKey(g.y, g.m, 1);
+      var lastOfMonth = toKey(g.y, g.m, lastDay);
+      var weeks = [];
+      var wk = getWeekDates(firstOfMonth)[0];
+      while (wk <= lastOfMonth) {
+        weeks.push(wk);
+        var d2 = new Date(wk + "T00:00:00");
+        d2.setDate(d2.getDate() + 7);
+        wk = toKey(d2.getFullYear(), d2.getMonth(), d2.getDate());
+      }
       return buildMonthPrintPage(g.y, g.m, evByDay) +
-        g.weeks.map(function (wk) { return buildWeekPrintPage(wk, evByDay); }).join("");
+        weeks.map(function (w) { return buildWeekPrintPage(w, evByDay); }).join("") +
+        buildMonthClosePage(g.y, g.m, evByDay);
     }).join("");
 
     var doc = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Agenda de tienda</title><style>' +
@@ -1056,7 +1113,14 @@
       '.evlist li{font-size:10px;line-height:1.4;margin-bottom:8px;}' +
       '.evlist-month li{font-size:8.5px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
       '.evlist .sub{font-size:8.5px;color:#234876;}' +
-      '.page-footer{margin-top:auto;padding-top:10mm;text-align:center;font-family:Georgia,serif;font-size:10px;color:#234876;border-top:1px solid #EDE6C9;}' +
+      '.page-footer{margin-top:auto;padding-top:6mm;text-align:right;font-family:Georgia,serif;font-size:8px;color:#234876;border-top:1px solid #EDE6C9;}' +
+      '.month-quote{font-family:Georgia,serif;font-style:italic;font-size:14px;color:#234876;border-left:3px solid #FFC229;padding:4px 0 4px 12px;margin:0 0 20px;}' +
+      'table.summary-table{width:100%;border-collapse:collapse;margin-bottom:26px;}' +
+      'table.summary-table th{text-align:left;font-size:10px;color:#234876;border-bottom:2px solid #0F2A4A;padding:5px 8px;}' +
+      'table.summary-table td{font-size:12px;border-bottom:1px solid #EDE6C9;padding:6px 8px;}' +
+      'table.summary-table td:last-child{text-align:right;font-weight:700;}' +
+      '.notes-label{font-family:Georgia,serif;font-size:12px;font-weight:700;color:#0F2A4A;margin:0 0 10px;}' +
+      '.notes-box .note-line{border-bottom:1px solid #EDE6C9;height:9mm;}' +
       '@media print { .print-page{padding:8mm;min-height:277mm;} }' +
       "</style></head><body>" + pages + "</body></html>";
 
