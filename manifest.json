@@ -1,6 +1,6 @@
 {
-  "name": "Agenda de tienda",
-  "short_name": "Agenda",
+  "name": "Agenda de Romina",
+  "short_name": "Agenda de Romina",
   "description": "Agenda de tareas, citas, promociones y reducciones con comparativa año a año",
   "start_url": "./index.html",
   "scope": "./",
