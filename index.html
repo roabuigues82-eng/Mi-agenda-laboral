@@ -980,20 +980,43 @@
 
   function buildMonthClosePage(y, m, evByDay) {
     var quote = AGENDA_QUOTES[(y * 12 + m) % AGENDA_QUOTES.length];
-    var blankRows = "";
-    for (var i = 0; i < 14; i++) {
-      blankRows += "<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
-    }
 
-    var linesHtml = "";
-    for (var j = 0; j < 6; j++) linesHtml += '<div class="note-line"></div>';
+    var monthEvents = state.events.filter(function (e) {
+      var d = new Date(e.date + "T00:00:00");
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+    var byCat = {};
+    Object.keys(CATS).forEach(function (k) { byCat[k] = []; });
+    monthEvents.slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).forEach(function (e) {
+      byCat[e.category].push(e);
+    });
+
+    var statBoxes = Object.keys(CATS).map(function (k) {
+      return '<div class="stat-box"><div class="stat-line">' + byCat[k].length + '</div><span>' + CATS[k].label.toLowerCase() + '</span></div>';
+    }).join("");
+
+    var catBoxes = Object.keys(CATS).map(function (k) {
+      var items = byCat[k];
+      var lines;
+      if (items.length === 0) {
+        lines = '<div class="cat-box-line"></div><div class="cat-box-line"></div>';
+      } else {
+        lines = items.slice(0, 4).map(function (e) {
+          var d = new Date(e.date + "T00:00:00");
+          return '<div class="cat-box-item">' + d.getDate() + " " + MESES_ABR[d.getMonth()] + " — " + escapeHtml(e.title) + '</div>';
+        }).join("");
+        if (items.length > 4) lines += '<div class="cat-box-item muted-item">+' + (items.length - 4) + ' más</div>';
+      }
+      return '<div class="cat-box"><h4>' + CATS[k].label + '</h4>' + lines + '</div>';
+    }).join("");
 
     return wrapPrintPage(
       "<h1>Cierre de " + MESES[m] + " " + y + "</h1>" +
       '<p class="month-quote">“' + escapeHtml(quote) + '”</p>' +
-      '<table class="summary-table blank-table"><thead><tr><th>Producto / tarea</th><th>Qué se hizo</th><th>Fecha</th></tr></thead><tbody>' + blankRows + "</tbody></table>" +
-      '<p class="notes-label">Notas del mes</p>' +
-      '<div class="notes-box">' + linesHtml + "</div>"
+      '<div class="stat-strip">' + statBoxes + '</div>' +
+      '<div class="cat-grid">' + catBoxes + '</div>' +
+      '<div class="learning-block"><p>Aprendizaje del mes:</p><div class="dotted-line"></div></div>' +
+      '<div class="review-box"><p>Para mencionar en mi próxima reunión</p><div class="dotted-line light"></div><div class="dotted-line light"></div></div>'
     );
   }
 
@@ -1124,6 +1147,22 @@
       '.page-footer{margin-top:auto;padding-top:6mm;text-align:right;font-family:"Playfair Display",Georgia,serif;font-size:8px;color:#234876;border-top:1px solid #EDE6C9;}' +
       '.month-quote{font-family:"Caveat",cursive;font-size:26px;font-weight:600;color:#0F2A4A;text-align:center;margin:0 0 20px;padding:10px 0;border-top:1px solid #FFC229;border-bottom:1px solid #FFC229;}' +
       '.ev-ic{display:inline-flex;vertical-align:-1.5px;margin-right:4px;}' +
+      '.stat-strip{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}' +
+      '.stat-box{flex:1;min-width:22mm;background:#FFF3D0;border:1px solid #FFC229;border-radius:8px;padding:8px 6px;text-align:center;}' +
+      '.stat-line{font-family:"Playfair Display",Georgia,serif;font-size:18px;font-weight:700;color:#0F2A4A;margin-bottom:4px;}' +
+      '.cat-box-item{font-size:9.5px;color:#0F2A4A;border-bottom:1px solid #EDE6C9;padding:3px 0;}' +
+      '.cat-box-item.muted-item{color:#234876;font-style:italic;}' +
+      '.stat-box span{font-size:8px;color:#234876;text-transform:uppercase;letter-spacing:.02em;}' +
+      '.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;}' +
+      '.cat-box{border:1px solid #EDE6C9;border-radius:8px;padding:8px 10px;}' +
+      '.cat-box h4{font-family:"Playfair Display",Georgia,serif;font-size:12px;font-weight:700;color:#0F2A4A;margin:0 0 6px;}' +
+      '.cat-box-line{border-bottom:1px solid #EDE6C9;height:6.5mm;}' +
+      '.learning-block{border-left:3px solid #FFC229;padding-left:10px;margin-bottom:16px;}' +
+      '.learning-block p{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:13px;color:#0F2A4A;margin:0 0 8px;}' +
+      '.dotted-line{border-bottom:1px dotted #234876;height:7mm;}' +
+      '.review-box{background:#0F2A4A;border-radius:10px;padding:10px 14px;}' +
+      '.review-box p{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:12px;color:#FFC229;margin:0 0 8px;}' +
+      '.review-box .dotted-line.light{border-bottom:1px dotted rgba(255,255,255,0.4);margin-bottom:4px;}' +
       '.evlist-month li{display:flex;align-items:center;}' +
       '.evlist li{padding-left:6px;}' +
       '.cover-page{position:relative;align-items:center;justify-content:center;overflow:hidden;}' +
