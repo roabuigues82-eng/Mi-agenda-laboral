@@ -935,6 +935,13 @@
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
   }
 
+  function wrapPrintPage(innerHtml) {
+    return '<div class="print-page">' +
+      '<div class="print-page-content">' + innerHtml + '</div>' +
+      '<div class="page-footer">Romina Buigues</div>' +
+    '</div>';
+  }
+
   function buildMonthPrintPage(y, m, evByDay) {
     var first = new Date(y, m, 1);
     var startOffset = (first.getDay() + 6) % 7;
@@ -955,7 +962,7 @@
         var isToday = key === todayKey();
         rowsHtml += '<td' + (isToday ? ' class="today"' : '') + '>' +
           '<div class="daynum">' + dnum + '</div>' +
-          '<ul class="evlist">' + evs.map(function (e) {
+          '<ul class="evlist evlist-month">' + evs.map(function (e) {
             return "<li>" + (e.time ? escapeHtml(e.time) + " " : "") + escapeHtml(e.title) + "</li>";
           }).join("") + "</ul>" +
         "</td>";
@@ -963,10 +970,36 @@
       rowsHtml += "</tr>";
     }
 
-    return '<div class="month-page">' +
+    return wrapPrintPage(
       "<h1>" + MESES[m] + " " + y + "</h1>" +
-      '<table class="cal-table"><thead><tr>' + DIAS_LARGOS.map(function (dn) { return "<th>" + dn.slice(0, 3) + "</th>"; }).join("") + "</tr></thead><tbody>" + rowsHtml + "</tbody></table>" +
-    "</div>";
+      '<table class="cal-table month-cal"><thead><tr>' + DIAS_LARGOS.map(function (dn) { return "<th>" + dn.slice(0, 3) + "</th>"; }).join("") + "</tr></thead><tbody>" + rowsHtml + "</tbody></table>"
+    );
+  }
+
+  function buildWeekPrintPage(weekStartKey, evByDay) {
+    var weekDates = getWeekDates(weekStartKey);
+    var weekNum = getISOWeek(weekStartKey);
+    var f = new Date(weekDates[0] + "T00:00:00"), l = new Date(weekDates[6] + "T00:00:00");
+    var rangeLabel = f.getDate() + " " + MESES_ABR[f.getMonth()] + " – " + l.getDate() + " " + MESES_ABR[l.getMonth()] + " " + l.getFullYear();
+
+    var cellsHtml = weekDates.map(function (key, i) {
+      var evs = evByDay[key] || [];
+      var isToday = key === todayKey();
+      var d = new Date(key + "T00:00:00");
+      return '<td' + (isToday ? ' class="today"' : '') + '>' +
+        '<div class="daynum">' + DIAS_LARGOS[i].slice(0, 3) + " " + d.getDate() + '</div>' +
+        '<ul class="evlist">' + evs.map(function (e) {
+          var checklist = e.checklist || [];
+          var sub = checklist.length ? checklist.map(function (it) { return (it.done ? "✓ " : "○ ") + escapeHtml(it.text); }).join("<br>") : "";
+          return "<li><b>" + (e.time ? escapeHtml(e.time) + " " : "") + escapeHtml(e.title) + "</b>" + (sub ? "<br><span class='sub'>" + sub + "</span>" : "") + "</li>";
+        }).join("") + "</ul>" +
+      "</td>";
+    }).join("");
+
+    return wrapPrintPage(
+      "<h1>Semana " + weekNum + " · " + rangeLabel + "</h1>" +
+      '<table class="cal-table"><tbody><tr>' + cellsHtml + "</tr></tbody></table>"
+    );
   }
 
   function printAgenda() {
@@ -978,30 +1011,53 @@
       evByDay[k].sort(function (a, b) { return (a.time || "").localeCompare(b.time || ""); });
     });
 
-    var monthsSeen = {};
-    var months = [];
-    state.events.slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).forEach(function (e) {
-      var d = new Date(e.date + "T00:00:00");
-      var key = d.getFullYear() + "-" + pad(d.getMonth() + 1);
-      if (!monthsSeen[key]) { monthsSeen[key] = true; months.push({ y: d.getFullYear(), m: d.getMonth() }); }
+    var sortedEvents = state.events.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+
+    // Group weeks under the month of their Monday, preserving chronological order
+    // of months as they first appear.
+    var monthOrder = [];
+    var monthGroups = {};
+    var weeksSeenPerMonth = {};
+    sortedEvents.forEach(function (e) {
+      var weekStart = getWeekDates(e.date)[0];
+      var wd = new Date(weekStart + "T00:00:00");
+      var mKey = wd.getFullYear() + "-" + pad(wd.getMonth() + 1);
+      if (!monthGroups[mKey]) {
+        monthGroups[mKey] = { y: wd.getFullYear(), m: wd.getMonth(), weeks: [] };
+        weeksSeenPerMonth[mKey] = {};
+        monthOrder.push(mKey);
+      }
+      if (!weeksSeenPerMonth[mKey][weekStart]) {
+        weeksSeenPerMonth[mKey][weekStart] = true;
+        monthGroups[mKey].weeks.push(weekStart);
+      }
     });
 
-    var pages = months.map(function (mo) { return buildMonthPrintPage(mo.y, mo.m, evByDay); }).join("");
+    var pages = monthOrder.map(function (mKey) {
+      var g = monthGroups[mKey];
+      return buildMonthPrintPage(g.y, g.m, evByDay) +
+        g.weeks.map(function (wk) { return buildWeekPrintPage(wk, evByDay); }).join("");
+    }).join("");
 
     var doc = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Agenda de tienda</title><style>' +
       'body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;color:#0F2A4A;margin:0;}' +
-      '.month-page{padding:14mm;page-break-after:always;}' +
-      '.month-page:last-child{page-break-after:auto;}' +
-      'h1{font-family:Georgia,serif;font-size:20px;border-bottom:3px solid #FFC229;padding-bottom:8px;margin:0 0 10px;}' +
-      'table.cal-table{width:100%;border-collapse:collapse;table-layout:fixed;}' +
-      'th{font-size:10px;font-weight:600;color:#234876;text-align:left;padding:4px 6px;border-bottom:2px solid #0F2A4A;}' +
-      'td{border:1px solid #EDE6C9;vertical-align:top;height:26mm;padding:4px;}' +
+      '.print-page{padding:14mm;min-height:273mm;box-sizing:border-box;display:flex;flex-direction:column;page-break-after:always;}' +
+      '.print-page:last-child{page-break-after:auto;}' +
+      '.print-page-content{flex:1;}' +
+      'h1{font-family:Georgia,serif;font-size:19px;border-bottom:3px solid #FFC229;padding-bottom:8px;margin:0 0 12px;}' +
+      'table.cal-table{width:100%;border-collapse:collapse;table-layout:fixed;height:1px;}' +
+      'table.month-cal th{font-size:10px;font-weight:600;color:#234876;text-align:left;padding:4px 6px;border-bottom:2px solid #0F2A4A;}' +
+      'td{border:1px solid #EDE6C9;vertical-align:top;padding:6px;height:100%;}' +
+      'table.month-cal td{height:24mm;}' +
       'td.empty{border:1px solid #f5f2e6;background:#fcfbf7;}' +
       'td.today{background:#FFF3D0;border:1.5px solid #FFC229;}' +
-      '.daynum{font-size:12px;font-weight:700;margin-bottom:3px;}' +
+      '.daynum{font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;color:#234876;}' +
       '.evlist{list-style:none;margin:0;padding:0;}' +
-      '.evlist li{font-size:8.5px;line-height:1.3;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
-      '@media print { .month-page{padding:8mm;} td{height:24mm;} }' +
+      '.evlist li{font-size:10px;line-height:1.4;margin-bottom:8px;}' +
+      '.evlist-month li{font-size:8.5px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
+      '.evlist .sub{font-size:8.5px;color:#234876;}' +
+      '.page-footer{margin-top:auto;padding-top:10mm;text-align:center;font-family:Georgia,serif;font-size:10px;color:#234876;border-top:1px solid #EDE6C9;}' +
+      '@media print { .print-page{padding:8mm;min-height:277mm;} }' +
       "</style></head><body>" + pages + "</body></html>";
 
     var win = window.open("", "_blank");
