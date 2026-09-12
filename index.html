@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Agenda de tienda</title>
+<title>Agenda de Romina</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="shortcut icon" type="image/png" href="icon-192.png">
 <meta name="theme-color" content="#FFC229">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Agenda de tienda">
+<meta name="apple-mobile-web-app-title" content="Agenda de Romina">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root {
@@ -256,7 +256,7 @@
     return [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Agenda de tienda//ES",
+      "PRODID:-//Agenda de Romina//ES",
       "CALSCALE:GREGORIAN"
     ].concat(events.map(eventToICS)).concat(["END:VCALENDAR"]).join("\r\n");
   }
@@ -519,7 +519,7 @@
     return '' +
       '<div class="header">' +
         '<div class="header-top">' +
-          '<div class="brand">' + iconCalendar() + '<h1>Agenda de tienda</h1></div>' +
+          '<div class="brand">' + iconCalendar() + '<h1>Agenda de Romina</h1></div>' +
           '<div class="header-controls">' +
             '<div class="segmented">' +
               '<button type="button" id="modeMonth" class="' + (state.viewMode === "month" ? "active" : "") + '">Mes</button>' +
@@ -935,6 +935,29 @@
     return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="' + color + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
   }
 
+  function buildCoverPage(firstDate, lastDate) {
+    var f = new Date(firstDate + "T00:00:00"), l = new Date(lastDate + "T00:00:00");
+    var rangeLabel = MESES[f.getMonth()] + " " + f.getFullYear() +
+      (f.getMonth() === l.getMonth() && f.getFullYear() === l.getFullYear() ? "" : " – " + MESES[l.getMonth()] + " " + l.getFullYear());
+    var dots = [
+      { x: 12, y: 14, r: 3, c: "#FFC229" }, { x: 88, y: 10, r: 2, c: "#0F2A4A" },
+      { x: 92, y: 30, r: 4, c: "#FFC229" }, { x: 8, y: 40, r: 2.5, c: "#0F2A4A" },
+      { x: 20, y: 88, r: 3, c: "#FFC229" }, { x: 80, y: 92, r: 3.5, c: "#0F2A4A" },
+      { x: 6, y: 70, r: 2, c: "#FFC229" }, { x: 95, y: 65, r: 2.5, c: "#0F2A4A" }
+    ].map(function (d) { return '<circle cx="' + d.x + '%" cy="' + d.y + '%" r="' + d.r + 'mm" fill="' + d.c + '" opacity="0.55"/>'; }).join("");
+
+    return '<div class="print-page cover-page">' +
+      '<svg class="cover-dots" viewBox="0 0 100 100" preserveAspectRatio="none">' + dots + '</svg>' +
+      '<div class="cover-content">' +
+        '<div class="cover-icon">' + categoryIcon("cita", "#0F2A4A", 46) + '</div>' +
+        '<h1 class="cover-title">Agenda de Romina</h1>' +
+        '<p class="cover-range">' + rangeLabel + '</p>' +
+        '<div class="cover-rule"></div>' +
+        '<p class="cover-name">Romina Buigues</p>' +
+      '</div>' +
+    '</div>';
+  }
+
   function wrapPrintPage(innerHtml) {
     return '<div class="print-page">' +
       '<div class="print-page-content">' + innerHtml + '</div>' +
@@ -943,44 +966,20 @@
   }
 
   var AGENDA_QUOTES = [
-    // Liderazgo
-    "Un buen líder no da todas las respuestas; hace las preguntas correctas.",
-    "Dirigir un equipo es prestar atención antes de dar órdenes.",
-    "Un equipo rinde como se siente tratado, no como se le exige.",
-    "La autoridad se ejerce mejor cuando casi no hace falta usarla.",
-    // Organización de tienda
-    "Una tienda ordenada vende sola la mitad del trabajo.",
-    "Lo que no se etiqueta, se olvida; lo que se olvida, se pierde.",
-    "Cada producto en su sitio ahorra horas que no ves hasta que faltan.",
-    "La reposición a tiempo es la promoción más barata que existe.",
-    // Vida
-    "El tiempo que se organiza rinde el doble que el que se improvisa.",
-    "No hay semana perfecta, hay semanas bien cerradas.",
-    "Lo urgente grita, lo importante espera pacientemente a que lo mires.",
-    "Un buen descanso también forma parte del trabajo bien hecho.",
-    // Más humanas
-    "Detrás de cada tarea hecha hay alguien que decidió no dejarla para luego.",
-    "Cuidar de un equipo también es cuidar de una misma.",
-    "No todo lo que cansa se nota, pero se agradece cuando se hace bien.",
-    "Un gracias a tiempo rinde tanto como una buena venta.",
-    "Se lidera mejor cuando también se descansa a tiempo.",
-    // Financieras
-    "Un euro ahorrado en mermas es un euro ganado sin vender nada.",
-    "Los números cuentan la historia que la memoria olvida.",
-    "Cuidar el margen es tan importante como cuidar la venta.",
-    "Lo que no se controla, se escapa poco a poco del balance.",
-    "Una reducción a tiempo cuesta menos que una pérdida total.",
-    // Valores: respeto, simplicidad, humildad, honestidad, modestia
-    "Pedir perdón no te hace menos persona, te hace más honesta contigo misma.",
-    "Tratar bien a quien no puede devolverte nada es la prueba real de cómo eres.",
-    "Lo simple no es fácil de encontrar, pero es fácil de reconocer cuando aparece.",
-    "Una verdad incómoda hoy pesa menos que una mentira sostenida durante meses.",
-    "El trabajo bien hecho no necesita quien lo aplauda para seguir siendo bueno."
+    "Hoy también cuenta.",
+    "Vas mejor de lo que crees.",
+    "Un paso, y ya es distinto.",
+    "Se puede empezar de nuevo, hoy mismo.",
+    "Tu ritmo también es válido.",
+    "Respira, ya vas por buen camino.",
+    "Pedir ayuda es de valientes.",
+    "Hoy no hace falta ser perfecta, solo constante.",
+    "Un mal día no borra un buen mes.",
+    "Puedes ir despacio, no parar."
   ];
 
   function buildMonthClosePage(y, m, evByDay) {
     var quote = AGENDA_QUOTES[(y * 12 + m) % AGENDA_QUOTES.length];
-
     var blankRows = "";
     for (var i = 0; i < 14; i++) {
       blankRows += "<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>";
@@ -991,7 +990,7 @@
 
     return wrapPrintPage(
       "<h1>Cierre de " + MESES[m] + " " + y + "</h1>" +
-      '<p class="month-quote">“' + quote + '”</p>' +
+      '<p class="month-quote">“' + escapeHtml(quote) + '”</p>' +
       '<table class="summary-table blank-table"><thead><tr><th>Producto / tarea</th><th>Qué se hizo</th><th>Fecha</th></tr></thead><tbody>' + blankRows + "</tbody></table>" +
       '<p class="notes-label">Notas del mes</p>' +
       '<div class="notes-box">' + linesHtml + "</div>"
@@ -1019,7 +1018,7 @@
         rowsHtml += '<td' + (isToday ? ' class="today"' : '') + '>' +
           '<div class="daynum">' + dnum + '</div>' +
           '<ul class="evlist evlist-month">' + evs.map(function (e) {
-            return "<li>" + (e.time ? escapeHtml(e.time) + " " : "") + escapeHtml(e.title) + "</li>";
+            return "<li><span class='ev-ic'>" + categoryIcon(e.category, CATS[e.category].border, 8) + "</span>" + (e.time ? escapeHtml(e.time) + " " : "") + escapeHtml(e.title) + "</li>";
           }).join("") + "</ul>" +
         "</td>";
       }
@@ -1048,7 +1047,7 @@
           (evs.length ? '<ul class="evlist">' + evs.map(function (e) {
             var checklist = e.checklist || [];
             var sub = checklist.length ? checklist.map(function (it) { return (it.done ? "✓ " : "○ ") + escapeHtml(it.text); }).join(" · ") : "";
-            return "<li><b>" + (e.time ? escapeHtml(e.time) + " " : "") + escapeHtml(e.title) + "</b>" + (sub ? " — <span class='sub'>" + sub + "</span>" : "") + "</li>";
+            return "<li style='border-left:3px solid " + CATS[e.category].border + "'><span class='ev-ic'>" + categoryIcon(e.category, CATS[e.category].border, 10) + "</span><b>" + (e.time ? escapeHtml(e.time) + " " : "") + escapeHtml(e.title) + "</b>" + (sub ? " — <span class='sub'>" + sub + "</span>" : "") + "</li>";
           }).join("") + "</ul>" : "") +
           '<div class="week-row-blank"></div>' +
         '</div>' +
@@ -1102,12 +1101,15 @@
         buildMonthClosePage(g.y, g.m, evByDay);
     }).join("");
 
-    var doc = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Agenda de tienda</title><style>' +
+    pages = buildCoverPage(sortedEvents[0].date, sortedEvents[sortedEvents.length - 1].date) + pages;
+
+    var doc = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Agenda de Romina</title><style>' +
+      "@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,500&family=Caveat:wght@600&display=swap');" +
       'body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;color:#0F2A4A;margin:0;}' +
       '.print-page{padding:14mm;min-height:273mm;box-sizing:border-box;display:flex;flex-direction:column;page-break-after:always;}' +
       '.print-page:last-child{page-break-after:auto;}' +
       '.print-page-content{flex:1;}' +
-      'h1{font-family:Georgia,serif;font-size:19px;border-bottom:3px solid #FFC229;padding-bottom:8px;margin:0 0 12px;}' +
+      'h1{font-family:"Playfair Display",Georgia,serif;font-weight:600;font-size:21px;letter-spacing:0.01em;border-bottom:3px solid #FFC229;padding-bottom:8px;margin:0 0 14px;}' +
       'table.cal-table{width:100%;border-collapse:collapse;table-layout:fixed;height:1px;}' +
       'table.month-cal th{font-size:10px;font-weight:600;color:#234876;text-align:left;padding:4px 6px;border-bottom:2px solid #0F2A4A;}' +
       'td{border:1px solid #EDE6C9;vertical-align:top;padding:6px;height:100%;}' +
@@ -1119,22 +1121,33 @@
       '.evlist li{font-size:10px;line-height:1.4;margin-bottom:8px;}' +
       '.evlist-month li{font-size:8.5px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}' +
       '.evlist .sub{font-size:8.5px;color:#234876;}' +
-      '.page-footer{margin-top:auto;padding-top:6mm;text-align:right;font-family:Georgia,serif;font-size:8px;color:#234876;border-top:1px solid #EDE6C9;}' +
-      '.month-quote{font-family:Georgia,serif;font-style:italic;font-size:14px;color:#234876;border-left:3px solid #FFC229;padding:4px 0 4px 12px;margin:0 0 20px;}' +
+      '.page-footer{margin-top:auto;padding-top:6mm;text-align:right;font-family:"Playfair Display",Georgia,serif;font-size:8px;color:#234876;border-top:1px solid #EDE6C9;}' +
+      '.month-quote{font-family:"Caveat",cursive;font-size:26px;font-weight:600;color:#0F2A4A;text-align:center;margin:0 0 20px;padding:10px 0;border-top:1px solid #FFC229;border-bottom:1px solid #FFC229;}' +
+      '.ev-ic{display:inline-flex;vertical-align:-1.5px;margin-right:4px;}' +
+      '.evlist-month li{display:flex;align-items:center;}' +
+      '.evlist li{padding-left:6px;}' +
+      '.cover-page{position:relative;align-items:center;justify-content:center;overflow:hidden;}' +
+      '.cover-dots{position:absolute;inset:0;width:100%;height:100%;}' +
+      '.cover-content{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}' +
+      '.cover-icon{width:22mm;height:22mm;border-radius:999px;background:#FFF3D0;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:2px solid #FFC229;}' +
+      '.cover-title{font-family:"Playfair Display",Georgia,serif;font-size:34px;font-weight:600;color:#0F2A4A;border:none;margin:0;padding:0;}' +
+      '.cover-range{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:15px;color:#234876;margin:8px 0 24px;}' +
+      '.cover-rule{width:40mm;height:3px;background:#FFC229;border-radius:2px;margin-bottom:14px;}' +
+      '.cover-name{font-family:"Caveat",cursive;font-size:22px;color:#0F2A4A;margin:0;}' +
       'table.summary-table{width:100%;border-collapse:collapse;margin-bottom:26px;}' +
       'table.summary-table th{text-align:left;font-size:10px;color:#234876;border-bottom:2px solid #0F2A4A;padding:5px 8px;}' +
       'table.summary-table td{font-size:12px;border-bottom:1px solid #EDE6C9;padding:6px 8px;}' +
       'table.summary-table td:last-child{text-align:right;font-weight:700;}' +
       'table.blank-table td{height:8mm;text-align:left;font-weight:400;}' +
       'table.blank-table th{width:33%;}' +
-      '.notes-label{font-family:Georgia,serif;font-size:12px;font-weight:700;color:#0F2A4A;margin:0 0 10px;}' +
+      '.notes-label{font-family:"Playfair Display",Georgia,serif;font-size:12px;font-weight:700;color:#0F2A4A;margin:0 0 10px;}' +
       '.notes-box .note-line{border-bottom:1px solid #EDE6C9;height:9mm;}' +
       '.week-rows{flex:1;display:flex;flex-direction:column;border:1px solid #EDE6C9;border-radius:10px;overflow:hidden;}' +
       '.week-row{flex:1;display:flex;border-bottom:1px solid #EDE6C9;}' +
       '.week-row:last-child{border-bottom:none;}' +
       '.week-row.today{background:#FFF9E8;}' +
       '.week-row-label{width:26mm;flex-shrink:0;background:#FFF3D0;display:flex;flex-direction:column;justify-content:center;padding:6px 8px;border-right:1px solid #EDE6C9;}' +
-      '.wrl-day{font-family:Georgia,serif;font-size:11px;font-weight:700;color:#0F2A4A;display:block;}' +
+      '.wrl-day{font-family:"Playfair Display",Georgia,serif;font-size:11px;font-weight:700;color:#0F2A4A;display:block;}' +
       '.wrl-date{font-size:8.5px;color:#234876;display:block;margin-top:2px;}' +
       '.week-row-content{flex:1;padding:6px 10px;display:flex;flex-direction:column;}' +
       '.week-row-content .evlist{margin:0 0 4px;}' +
