@@ -122,6 +122,12 @@
   .existing-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .existing-item { border-radius: 12px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .existing-item .ei-icon { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; }
+  .existing-item .ei-photo { flex-shrink: 0; width: 34px; height: 34px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 1px solid rgba(0,0,0,0.15); }
+  #f-photo-input { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; background: #fff; }
+  .photo-thumb-wrap { position: relative; display: inline-block; margin-top: 8px; }
+  .photo-thumb { width: 90px; height: 90px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); cursor: pointer; display: block; }
+  .photo-remove { position: absolute; top: -6px; right: -6px; background: var(--navy); color: #fff; border-radius: 999px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .lightbox-img { max-width: 92vw; max-height: 92vh; border-radius: 10px; object-fit: contain; }
   .existing-item .info { min-width: 0; flex: 1; }
   .existing-item .info p:first-child { font-size: 11.5px; font-weight: 600; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .existing-item .info p:last-child { font-size: 10px; opacity: .8; margin: 2px 0 0; }
@@ -464,6 +470,18 @@
     if (existing) existing.remove();
   }
 
+  function openLightbox(src) {
+    var existing = document.getElementById("lightboxOverlay");
+    if (existing) existing.remove();
+    var overlay = document.createElement("div");
+    overlay.id = "lightboxOverlay";
+    overlay.className = "overlay";
+    overlay.style.zIndex = "200";
+    overlay.innerHTML = '<img src="' + src + '" class="lightbox-img">';
+    overlay.addEventListener("click", function () { overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
   function openModal(mode, date, event) {
     state.selectedDate = date;
     state.modal = { mode: mode, date: date, event: event || null };
@@ -662,6 +680,7 @@
           var doneCount = checklist.filter(function (it) { return it.done; }).length;
           return '<div class="existing-item" style="background:' + c.bg + ';color:' + c.fg + '">' +
             '<div class="ei-icon">' + categoryIcon(ev.category, c.fg, 26) + '</div>' +
+            (ev.photo ? '<img src="' + ev.photo + '" class="ei-photo view-photo" data-id="' + ev.id + '">' : '') +
             '<div class="info"><p>' + escapeHtml(ev.title) + '</p><p>' + c.label + (ev.time ? ' · ' + escapeHtml(ev.time) : '') + (checklist.length ? ' · <span class="progress">' + doneCount + '/' + checklist.length + ' hecho</span>' : '') + '</p></div>' +
             '<div class="actions">' +
               '<button type="button" class="whatsapp-existing" data-id="' + ev.id + '" title="Compartir por WhatsApp">' + iconWhatsApp() + '</button>' +
@@ -682,6 +701,11 @@
           '<div class="field"><label>Título</label><input type="text" id="f-title" placeholder="Ej. Revisión de precios promoción verano" value="' + (editing ? escapeHtml(editing.title) : "") + '" required></div>' +
           '<p class="error-text" id="f-title-error" style="display:none;">Escribe un título para poder guardar el evento.</p>' +
           '<div class="field"><label>Notas / datos a guardar</label><textarea id="f-notes" rows="3" placeholder="Detalles que quieras comparar el año que viene">' + (editing ? escapeHtml(editing.notes || "") : "") + '</textarea></div>' +
+          '<div class="field">' +
+            '<label>Foto del ticket / producto (opcional)</label>' +
+            '<input type="file" accept="image/*" capture="environment" id="f-photo-input">' +
+            '<div id="photo-preview"></div>' +
+          '</div>' +
           '<div class="field"><label>Avisarme con antelación (días)</label><input type="number" id="f-alertDays" min="0" max="30" value="' + (editing && editing.alertDays != null ? editing.alertDays : 2) + '"></div>' +
           '<div class="checklist-box">' +
             '<label>Qué se ha hecho (marca según lo realices)</label>' +
@@ -698,10 +722,16 @@
     document.body.appendChild(overlay);
     state.modal.checklist = (editing && editing.checklist ? editing.checklist.slice() : []);
     renderChecklistItems();
+    state.modal.photo = (editing && editing.photo) ? editing.photo : null;
+    renderPhotoPreview();
 
     overlay.addEventListener("click", function (e) { if (e.target === overlay) closeModal(); });
     document.getElementById("modalCard").addEventListener("click", function (e) { e.stopPropagation(); });
     document.getElementById("modalClose").addEventListener("click", closeModal);
+
+    overlay.querySelectorAll(".view-photo").forEach(function (img) {
+      img.addEventListener("click", function () { openLightbox(img.src); });
+    });
 
     overlay.querySelectorAll(".whatsapp-existing").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -780,6 +810,61 @@
       if (e.key === "Enter") { e.preventDefault(); document.getElementById("checklist-add-btn").click(); }
     });
 
+    function renderPhotoPreview() {
+      var container = document.getElementById("photo-preview");
+      if (!container) return;
+      if (!state.modal.photo) {
+        container.innerHTML = "";
+        return;
+      }
+      container.innerHTML =
+        '<div class="photo-thumb-wrap">' +
+          '<img src="' + state.modal.photo + '" class="photo-thumb" id="photo-thumb-view">' +
+          '<button type="button" id="photo-remove" class="photo-remove" title="Quitar foto">' + iconX() + '</button>' +
+        '</div>';
+      document.getElementById("photo-remove").addEventListener("click", function () {
+        state.modal.photo = null;
+        document.getElementById("f-photo-input").value = "";
+        renderPhotoPreview();
+      });
+      document.getElementById("photo-thumb-view").addEventListener("click", function () {
+        openLightbox(state.modal.photo);
+      });
+    }
+
+    function compressImage(file, maxDim, quality) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          var img = new Image();
+          img.onload = function () {
+            var w = img.width, h = img.height;
+            if (w > h && w > maxDim) { h = Math.round(h * (maxDim / w)); w = maxDim; }
+            else if (h > maxDim) { w = Math.round(w * (maxDim / h)); h = maxDim; }
+            var canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.onerror = reject;
+          img.src = ev.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById("f-photo-input").addEventListener("change", function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      compressImage(file, 1000, 0.7).then(function (dataUrl) {
+        state.modal.photo = dataUrl;
+        renderPhotoPreview();
+      }).catch(function () {
+        alert("No se pudo procesar la foto. Prueba con otra.");
+      });
+    });
+
     document.getElementById("eventForm").addEventListener("submit", function (e) {
       e.preventDefault();
       var titleEl = document.getElementById("f-title");
@@ -798,7 +883,8 @@
         title: titleVal,
         notes: document.getElementById("f-notes").value,
         alertDays: Number(document.getElementById("f-alertDays").value || 0),
-        checklist: state.modal.checklist || []
+        checklist: state.modal.checklist || [],
+        photo: state.modal.photo || null
       };
       addOrUpdateEvent(ev);
     });
