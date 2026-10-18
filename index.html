@@ -148,7 +148,7 @@
   .checklist-add input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 12px; }
   .checklist-add button { background: var(--navy); color: #fff; border-radius: 8px; padding: 0 12px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 
-  .ql-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 440px; max-height: 88vh; overflow-y: auto; padding: 20px; }
+  .ql-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; padding: 20px; }
   .ql-help { font-size: 12px; color: var(--navy-soft); margin: 0 0 12px; }
   .ql-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
   .ql-form input[type=text], .ql-form input[type=date], .ql-form select, .ql-paste textarea { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; width: 100%; }
@@ -165,6 +165,21 @@
   .ql-paste { margin-bottom: 14px; font-size: 12px; }
   .ql-paste summary { cursor: pointer; font-weight: 600; color: var(--navy-soft); margin-bottom: 8px; }
   .ql-paste textarea { margin-bottom: 8px; }
+
+  .ql-grid { border: 1px solid var(--navy); border-radius: 10px; overflow: hidden; margin-bottom: 14px; background: #fff; }
+  .ql-grid-head, .ql-grid-row { display: grid; grid-template-columns: 128px 118px 1fr 30px; align-items: stretch; }
+  .ql-grid-head { background: var(--navy); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .ql-grid-head div { padding: 7px 8px; }
+  .ql-grid-row { border-top: 1px solid var(--border); }
+  .ql-grid-row input, .ql-grid-row select { border: 0; border-right: 1px solid var(--border); border-radius: 0; padding: 9px 8px; font-size: 13px; width: 100%; min-width: 0; background: transparent; color: var(--navy); }
+  .ql-grid-row input:focus, .ql-grid-row select:focus { outline: 2px solid var(--yellow, #FFC229); outline-offset: -2px; background: #FFFBEA; }
+  .ql-grid-row.ql-blank { background: #FAFAF5; }
+  .ql-grid-row .ql-del { display: flex; align-items: center; justify-content: center; opacity: .6; padding: 0; }
+  @media (max-width: 520px) {
+    .ql-grid-head { display: none; }
+    .ql-grid-row { grid-template-columns: 1fr 1fr 30px; grid-template-areas: "d c x" "t t t"; }
+    .ql-grid-row .g-d { grid-area: d; } .ql-grid-row .g-c { grid-area: c; } .ql-grid-row .g-t { grid-area: t; border-top: 1px solid var(--border); border-right: 0; } .ql-grid-row .ql-del { grid-area: x; }
+  }
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: 13px; font-weight: 600; padding: 10px 18px; border-radius: 999px; z-index: 300; box-shadow: 0 6px 16px rgba(15,42,74,0.3); }
   .search-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 480px; max-height: 82vh; display: flex; flex-direction: column; overflow: hidden; }
   .search-head { padding: 16px 16px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
@@ -510,6 +525,11 @@
   function parseQuickDate(token) {
     var t = token.toLowerCase().replace(/[:,;]+$/, "");
     var now = new Date();
+    var iso = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+      var iy = +iso[1], im = +iso[2], id = +iso[3], chk = new Date(iy, im - 1, id);
+      return (chk.getFullYear() === iy && chk.getMonth() === im - 1 && chk.getDate() === id) ? t : null;
+    }
     if (t === "hoy") return toKey(now.getFullYear(), now.getMonth(), now.getDate());
     if (t === "mañana" || t === "manana") {
       var tm = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
@@ -588,6 +608,30 @@
     if (existing) existing.remove();
   }
 
+  // Hoja en blanco para apuntar a mano en tienda (columnas Fecha / Categoría / Apunte)
+  function printBlankSheet() {
+    var rows = "";
+    for (var i = 0; i < 24; i++) rows += '<tr><td class="d"><span>/</span></td><td class="c"></td><td class="t"></td></tr>';
+    var cats = Object.keys(CATS).map(function (k) { return CATS[k].label; }).join(" · ");
+    var doc =
+      '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Apuntes de tienda</title>' +
+      '<style>@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Caveat:wght@600&display=swap");' +
+      '@page{size:A4;margin:14mm}*{box-sizing:border-box}body{margin:0;font-family:Helvetica,Arial,sans-serif;color:#0F2A4A;display:flex;flex-direction:column;min-height:265mm}' +
+      'h1{font-family:"Playfair Display",Georgia,serif;font-size:26px;margin:0 0 2px}' +
+      '.sub{font-family:Caveat,cursive;font-size:20px;margin:0 0 6px}.leg{font-size:11px;margin:0 0 10px}.leg b{color:#0F2A4A}' +
+      'table{width:100%;border-collapse:collapse;flex:1}th{background:#0F2A4A;color:#fff;font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:7px 8px}' +
+      'td{border:1px solid #0F2A4A;height:30px}td.d{width:22mm;text-align:center;color:#bbb;font-size:14px}td.c{width:34mm}' +
+      '.foot{text-align:right;font-size:9px;margin-top:8px}</style></head><body>' +
+      '<h1>Apuntes de tienda</h1><p class="sub">Una cosa por fila. Fecha como día/mes.</p>' +
+      '<p class="leg"><b>Categoría:</b> ' + cats + '</p>' +
+      '<table><thead><tr><th>Fecha</th><th>Categoría</th><th>Apunte</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<div class="foot">Romina Buigues</div></body></html>';
+    var w = window.open("", "_blank");
+    if (!w) { showToast("Permite las ventanas emergentes para imprimir"); return; }
+    w.document.open(); w.document.write(doc); w.document.close();
+    setTimeout(function () { try { w.focus(); w.print(); } catch (e) {} }, 600);
+  }
+
   function openQuickList() {
     closeQuickList();
     var overlay = document.createElement("div");
@@ -596,22 +640,15 @@
     overlay.innerHTML =
       '<div class="ql-modal">' +
         '<div class="modal-head"><h3>Lista rápida</h3><button type="button" class="close-btn" id="qlClose">' + iconX() + '</button></div>' +
-        '<p class="ql-help">Apunta lo que vaya pasando en tienda, sin pensar en fechas. Al final pulsa «Pasar al calendario» y cada cosa va a su día.</p>' +
-        '<div class="ql-form">' +
-          '<input type="text" id="ql-text" placeholder="Ej. Yogures: bajar precio 50%" autocomplete="off">' +
-          '<div class="ql-row">' +
-            '<input type="date" id="ql-date" value="' + todayKey() + '">' +
-            '<select id="ql-cat">' + Object.keys(CATS).map(function (k) { return '<option value="' + k + '">' + CATS[k].label + '</option>'; }).join("") + '</select>' +
-            '<button type="button" id="ql-add">Añadir</button>' +
-          '</div>' +
-        '</div>' +
+        '<p class="ql-help">Rellena la tabla como en Excel: fecha, categoría y apunte. Se guarda sola. Al final pulsa «Pasar al calendario» y cada fila va a su día.</p>' +
+        '<button type="button" id="ql-print-sheet" style="display:block;margin:0 0 12px;background:none;color:var(--navy-soft);text-decoration:underline;font-size:12px;font-weight:600;">Imprimir hoja en blanco para rellenar a mano</button>' +
         '<div id="ql-items"></div>' +
         '<details class="ql-paste">' +
           '<summary>Pegar una lista o una tabla (Notas, WhatsApp, Excel)</summary>' +
           '<textarea id="ql-paste" rows="5" placeholder="Una cosa por línea. Puedes poner la fecha al principio o al final:&#10;15/10 reducción yogures 50%&#10;cita: proveedor mañana&#10;retirar leche 17/10"></textarea>' +
           '<button type="button" id="ql-paste-btn">Añadir las líneas pegadas</button>' +
-          '<p style="margin:12px 0 6px;">¿Tienes una tabla? Copia las celdas de Excel y pégalas arriba (columnas: fecha, categoría y texto, en el orden que sea), o carga un archivo CSV:</p>' +
-          '<input type="file" id="ql-file" accept=".csv,.txt,text/csv,text/plain" style="font-size:12px;">' +
+          '<p style="margin:12px 0 6px;">¿Tienes una tabla? Copia las celdas de Excel y pégalas arriba (columnas: fecha, categoría y texto, en el orden que sea), o carga directamente tu archivo de Excel (.xlsx) o CSV:</p>' +
+          '<input type="file" id="ql-file" accept=".xlsx,.xls,.csv,.txt" style="font-size:12px;">' +
           '<button type="button" id="ql-template" style="display:block;margin-top:8px;background:none;color:var(--navy-soft);text-decoration:underline;font-size:12px;">Descargar tabla modelo</button>' +
         '</details>' +
         '<button type="button" class="submit-btn" id="ql-import" style="width:100%;">Pasar al calendario</button>' +
@@ -621,57 +658,76 @@
     overlay.addEventListener("click", function (e) { if (e.target === overlay) closeQuickList(); });
     document.getElementById("qlClose").addEventListener("click", closeQuickList);
 
-    function renderItems() {
+    function catOptions(sel) {
+      return Object.keys(CATS).map(function (k) { return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + CATS[k].label + '</option>'; }).join("");
+    }
+    function rowHtml(it, blank) {
+      return '<div class="ql-grid-row' + (blank ? ' ql-blank' : '') + '"' + (blank ? ' data-blank="1"' : ' data-id="' + it.id + '"') + '>' +
+        '<input type="date" class="g-d" value="' + it.date + '" aria-label="Fecha">' +
+        '<select class="g-c" aria-label="Categoría">' + catOptions(it.category) + '</select>' +
+        '<input type="text" class="g-t" value="' + escapeHtml(it.title || "").replace(/"/g, "&quot;") + '" placeholder="' + (blank ? 'Escribe aquí un apunte nuevo…' : '') + '" autocomplete="off" aria-label="Apunte">' +
+        (blank ? '<span></span>' : '<button type="button" class="ql-del" title="Quitar fila">' + iconX() + '</button>') +
+      '</div>';
+    }
+
+    var lastDate = todayKey(), lastCat = "tarea";
+
+    function renderItems(focusBlank) {
       var list = loadQuickList();
       var container = document.getElementById("ql-items");
       var importBtn = document.getElementById("ql-import");
-      if (list.length === 0) {
-        container.innerHTML = '<p class="ql-empty">Todavía no has apuntado nada.</p>';
-        importBtn.textContent = "Pasar al calendario";
-        importBtn.disabled = true;
-        importBtn.style.opacity = "0.5";
-      } else {
-        container.innerHTML = '<div class="ql-list">' + list.map(function (it) {
-          var c = CATS[it.category] || CATS.tarea;
-          var d = new Date(it.date + "T00:00:00");
-          return '<div class="ql-item">' +
-            '<span class="ql-icon">' + categoryIcon(it.category, c.border, 18) + '</span>' +
-            '<span class="ql-title">' + escapeHtml(it.title) + '</span>' +
-            '<span class="ql-date">' + d.getDate() + ' ' + MESES_ABR[d.getMonth()] + '</span>' +
-            '<button type="button" class="ql-del" data-id="' + it.id + '" title="Quitar">' + iconX() + '</button>' +
-          '</div>';
-        }).join("") + '</div>';
-        importBtn.textContent = "Pasar al calendario (" + list.length + ")";
-        importBtn.disabled = false;
-        importBtn.style.opacity = "1";
-        container.querySelectorAll(".ql-del").forEach(function (btn) {
-          btn.addEventListener("click", function () {
-            var id = btn.getAttribute("data-id");
-            saveQuickList(loadQuickList().filter(function (x) { return x.id !== id; }));
-            renderItems();
-          });
+      container.innerHTML = '<div class="ql-grid">' +
+        '<div class="ql-grid-head"><div>Fecha</div><div>Categoría</div><div>Apunte</div><div></div></div>' +
+        list.map(function (it) { return rowHtml(it, false); }).join("") +
+        rowHtml({ date: lastDate, category: lastCat, title: "" }, true) +
+      '</div>';
+
+      var n = list.length;
+      importBtn.textContent = n ? "Pasar al calendario (" + n + ")" : "Pasar al calendario";
+      importBtn.disabled = n === 0;
+      importBtn.style.opacity = n ? "1" : "0.5";
+
+      container.querySelectorAll(".ql-grid-row").forEach(function (row) {
+        var blank = row.getAttribute("data-blank") === "1";
+        var dEl = row.querySelector(".g-d"), cEl = row.querySelector(".g-c"), tEl = row.querySelector(".g-t");
+        function commit() {
+          var all = loadQuickList();
+          if (blank) {
+            var title = tEl.value.trim();
+            lastDate = dEl.value || todayKey(); lastCat = cEl.value;
+            if (!title) return;
+            all.push({ id: uid(), title: title, date: lastDate, category: lastCat });
+            saveQuickList(all);
+            renderItems(true);
+          } else {
+            var id = row.getAttribute("data-id");
+            all.forEach(function (x) {
+              if (x.id === id) { x.title = tEl.value.trim() || x.title; x.date = dEl.value || x.date; x.category = cEl.value; }
+            });
+            saveQuickList(all);
+          }
+        }
+        dEl.addEventListener("change", function () { if (blank) { lastDate = dEl.value || todayKey(); } else { commit(); } });
+        cEl.addEventListener("change", function () { if (blank) { lastCat = cEl.value; } else { commit(); } });
+        tEl.addEventListener("change", commit);
+        tEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); tEl.blur(); } });
+        var del = row.querySelector(".ql-del");
+        if (del) del.addEventListener("click", function () {
+          var id = row.getAttribute("data-id");
+          saveQuickList(loadQuickList().filter(function (x) { return x.id !== id; }));
+          renderItems();
         });
+      });
+      if (focusBlank) {
+        var bt = container.querySelector('[data-blank="1"] .g-t');
+        if (bt) bt.focus();
       }
     }
 
-    function addFromInput() {
-      var input = document.getElementById("ql-text");
-      var item = parseQuickLine(input.value, document.getElementById("ql-date").value || todayKey(), document.getElementById("ql-cat").value);
-      if (!item) return;
-      saveQuickList(loadQuickList().concat([item]));
-      input.value = "";
-      renderItems();
-      input.focus();
-    }
-    document.getElementById("ql-add").addEventListener("click", addFromInput);
-    document.getElementById("ql-text").addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); addFromInput(); }
-    });
-
     document.getElementById("ql-paste-btn").addEventListener("click", function () {
       var area = document.getElementById("ql-paste");
-      var defDate = document.getElementById("ql-date").value || todayKey();
-      var defCat = document.getElementById("ql-cat").value;
+      var defDate = lastDate || todayKey();
+      var defCat = lastCat || "tarea";
       var items = area.value.split(/\r?\n/).map(function (line) { return parseQuickLine(line, defDate, defCat); }).filter(Boolean);
       if (items.length === 0) return;
       saveQuickList(loadQuickList().concat(items));
@@ -679,22 +735,62 @@
       renderItems();
     });
 
+    function addImportedLines(lines, input) {
+      var defDate = lastDate || todayKey(), defCat = lastCat || "tarea";
+      var items = lines.map(function (line) { return parseQuickLine(line, defDate, defCat); }).filter(Boolean);
+      if (input) input.value = "";
+      if (items.length === 0) { showToast("No encontré filas en el archivo"); return; }
+      saveQuickList(loadQuickList().concat(items));
+      renderItems();
+      showToast(items.length + " filas añadidas a la lista");
+    }
+
+    function loadSheetJS(cb) {
+      if (window.XLSX) return cb();
+      var sc = document.createElement("script");
+      sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+      sc.onload = cb;
+      sc.onerror = function () { showToast("Para leer Excel necesito internet; guarda el archivo como CSV"); };
+      document.head.appendChild(sc);
+    }
+
+    function excelRowsToLines(buf) {
+      var wb = window.XLSX.read(buf, { type: "array", cellDates: true });
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+      return rows.map(function (r) {
+        return r.map(function (c) {
+          if (Object.prototype.toString.call(c) === "[object Date]") {
+            // Las fechas de Excel llegan como Date; se pasan a AAAA-MM-DD sin desfase de zona horaria
+            var dt = new Date(c.getTime() + 12 * 3600 * 1000);
+            return dt.getUTCFullYear() + "-" + ("0" + (dt.getUTCMonth() + 1)).slice(-2) + "-" + ("0" + dt.getUTCDate()).slice(-2);
+          }
+          return String(c).replace(/[\t;\r\n]+/g, " ").trim();
+        }).join("\t");
+      });
+    }
+
     document.getElementById("ql-file").addEventListener("change", function (e) {
-      var f = e.target.files && e.target.files[0];
+      var input = e.target, f = input.files && input.files[0];
       if (!f) return;
       var reader = new FileReader();
-      reader.onload = function () {
-        var defDate = document.getElementById("ql-date").value || todayKey();
-        var defCat = document.getElementById("ql-cat").value;
-        var items = String(reader.result).replace(/^\uFEFF/, "").split(/\r?\n/).map(function (line) { return parseQuickLine(line, defDate, defCat); }).filter(Boolean);
-        e.target.value = "";
-        if (items.length === 0) { showToast("No encontré filas en el archivo"); return; }
-        saveQuickList(loadQuickList().concat(items));
-        renderItems();
-        showToast(items.length + " filas añadidas a la lista");
-      };
-      reader.readAsText(f);
+      if (/\.xlsx?$/i.test(f.name)) {
+        reader.onload = function () {
+          loadSheetJS(function () {
+            try { addImportedLines(excelRowsToLines(new Uint8Array(reader.result)), input); }
+            catch (err) { input.value = ""; showToast("No pude leer ese archivo de Excel"); }
+          });
+        };
+        reader.readAsArrayBuffer(f);
+      } else {
+        reader.onload = function () {
+          addImportedLines(String(reader.result).replace(/^\uFEFF/, "").split(/\r?\n/), input);
+        };
+        reader.readAsText(f);
+      }
     });
+
+    document.getElementById("ql-print-sheet").addEventListener("click", printBlankSheet);
 
     document.getElementById("ql-template").addEventListener("click", function () {
       var csv = "\uFEFFFecha;Categoría;Apunte\r\n" +
@@ -723,7 +819,6 @@
     });
 
     renderItems();
-    setTimeout(function () { document.getElementById("ql-text").focus(); }, 10);
   }
 
   function openLightbox(src) {
