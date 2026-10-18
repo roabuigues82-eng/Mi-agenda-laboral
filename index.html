@@ -148,7 +148,7 @@
   .checklist-add input { flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 12px; }
   .checklist-add button { background: var(--navy); color: #fff; border-radius: 8px; padding: 0 12px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 
-  .ql-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; padding: 20px; }
+  .ql-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 700px; max-height: 88vh; overflow-y: auto; padding: 20px; }
   .ql-help { font-size: 12px; color: var(--navy-soft); margin: 0 0 12px; }
   .ql-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
   .ql-form input[type=text], .ql-form input[type=date], .ql-form select, .ql-paste textarea { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; width: 100%; }
@@ -167,18 +167,18 @@
   .ql-paste textarea { margin-bottom: 8px; }
 
   .ql-grid { border: 1px solid var(--navy); border-radius: 10px; overflow: hidden; margin-bottom: 14px; background: #fff; }
-  .ql-grid-head, .ql-grid-row { display: grid; grid-template-columns: 128px 118px 1fr 30px; align-items: stretch; }
+  .ql-grid-head, .ql-grid-row { display: grid; grid-template-columns: 132px 124px 1fr 120px 30px; align-items: stretch; }
   .ql-grid-head { background: var(--navy); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-  .ql-grid-head div { padding: 7px 8px; }
+  .ql-grid-head div { padding: 9px 10px; }
   .ql-grid-row { border-top: 1px solid var(--border); }
-  .ql-grid-row input, .ql-grid-row select { border: 0; border-right: 1px solid var(--border); border-radius: 0; padding: 9px 8px; font-size: 13px; width: 100%; min-width: 0; background: transparent; color: var(--navy); }
+  .ql-grid-row input, .ql-grid-row select { border: 0; border-right: 1px solid var(--border); border-radius: 0; padding: 16px 10px; font-size: 15px; width: 100%; min-width: 0; background: transparent; color: var(--navy); }
   .ql-grid-row input:focus, .ql-grid-row select:focus { outline: 2px solid var(--yellow, #FFC229); outline-offset: -2px; background: #FFFBEA; }
   .ql-grid-row.ql-blank { background: #FAFAF5; }
   .ql-grid-row .ql-del { display: flex; align-items: center; justify-content: center; opacity: .6; padding: 0; }
   @media (max-width: 520px) {
     .ql-grid-head { display: none; }
-    .ql-grid-row { grid-template-columns: 1fr 1fr 30px; grid-template-areas: "d c x" "t t t"; }
-    .ql-grid-row .g-d { grid-area: d; } .ql-grid-row .g-c { grid-area: c; } .ql-grid-row .g-t { grid-area: t; border-top: 1px solid var(--border); border-right: 0; } .ql-grid-row .ql-del { grid-area: x; }
+    .ql-grid-row { grid-template-columns: 1fr 1fr 30px; grid-template-areas: "d c x" "t t t" "k k k"; }
+    .ql-grid-row .g-d { grid-area: d; } .ql-grid-row .g-c { grid-area: c; } .ql-grid-row .g-t { grid-area: t; border-top: 1px solid var(--border); border-right: 0; } .ql-grid-row .g-k { grid-area: k; border-top: 1px solid var(--border); border-right: 0; } .ql-grid-row .ql-del { grid-area: x; }
   }
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--navy); color: #fff; font-size: 13px; font-weight: 600; padding: 10px 18px; border-radius: 999px; z-index: 300; box-shadow: 0 6px 16px rgba(15,42,74,0.3); }
   .search-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 480px; max-height: 82vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -558,10 +558,11 @@
       else if (!catFound && QUICK_CAT_WORDS[low]) { category = QUICK_CAT_WORDS[low]; catFound = true; }
       else parts.push(c);
     });
-    if (!dateFound && !catFound && /^(fecha|date)$/.test(cells[0].toLowerCase())) return null; // fila de encabezados
-    var title = parts.join(" - ").trim();
+    if (!dateFound && cells.some(function (c) { return /^(fecha|date)$/.test(c.toLowerCase()); })) return null; // fila de encabezados
+    var title = (parts[0] || "").trim();
+    var code = parts.slice(1).join(" ").trim();
     if (!title) return null;
-    return { id: uid(), title: title, date: date, category: category };
+    return { id: uid(), title: title, date: date, category: category, code: code };
   }
 
   function parseQuickLine(raw, defaultDate, defaultCat) {
@@ -592,7 +593,7 @@
 
     var title = tokens.join(" ").trim();
     if (!title) return null;
-    return { id: uid(), title: title, date: date, category: category };
+    return { id: uid(), title: title, date: date, category: category, code: "" };
   }
 
   function showToast(msg) {
@@ -611,7 +612,7 @@
   // Hoja en blanco para apuntar a mano en tienda (columnas Fecha / Categoría / Apunte)
   function printBlankSheet() {
     var rows = "";
-    for (var i = 0; i < 24; i++) rows += '<tr><td class="d"><span>/</span></td><td class="c"></td><td class="t"></td></tr>';
+    for (var i = 0; i < 14; i++) rows += '<tr><td class="d"><span>/</span></td><td class="c"></td><td class="t"></td><td class="k"></td></tr>';
     var cats = Object.keys(CATS).map(function (k) { return CATS[k].label; }).join(" · ");
     var doc =
       '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Apuntes de tienda</title>' +
@@ -620,11 +621,11 @@
       'h1{font-family:"Playfair Display",Georgia,serif;font-size:26px;margin:0 0 2px}' +
       '.sub{font-family:Caveat,cursive;font-size:20px;margin:0 0 6px}.leg{font-size:11px;margin:0 0 10px}.leg b{color:#0F2A4A}' +
       'table{width:100%;border-collapse:collapse;flex:1}th{background:#0F2A4A;color:#fff;font-size:11px;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:7px 8px}' +
-      'td{border:1px solid #0F2A4A;height:30px}td.d{width:22mm;text-align:center;color:#bbb;font-size:14px}td.c{width:34mm}' +
+      'td{border:1px solid #0F2A4A;height:15mm}td.d{width:26mm;text-align:center;color:#bbb;font-size:16px}td.c{width:36mm}td.k{width:38mm}' +
       '.foot{text-align:right;font-size:9px;margin-top:8px}</style></head><body>' +
-      '<h1>Apuntes de tienda</h1><p class="sub">Una cosa por fila. Fecha como día/mes.</p>' +
+      '<h1>Apuntes de tienda</h1><p class="sub">Un artículo por fila. Fecha como día/mes.</p>' +
       '<p class="leg"><b>Categoría:</b> ' + cats + '</p>' +
-      '<table><thead><tr><th>Fecha</th><th>Categoría</th><th>Apunte</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<table><thead><tr><th>Fecha</th><th>Categoría</th><th>Artículo</th><th>Código</th></tr></thead><tbody>' + rows + '</tbody></table>' +
       '<div class="foot">Romina Buigues</div></body></html>';
     var w = window.open("", "_blank");
     if (!w) { showToast("Permite las ventanas emergentes para imprimir"); return; }
@@ -640,7 +641,7 @@
     overlay.innerHTML =
       '<div class="ql-modal">' +
         '<div class="modal-head"><h3>Lista rápida</h3><button type="button" class="close-btn" id="qlClose">' + iconX() + '</button></div>' +
-        '<p class="ql-help">Rellena la tabla como en Excel: fecha, categoría y apunte. Se guarda sola. Al final pulsa «Pasar al calendario» y cada fila va a su día.</p>' +
+        '<p class="ql-help">Rellena la tabla como en Excel: fecha, categoría, artículo y código. Se guarda sola. Al final pulsa «Pasar al calendario» y cada fila va a su día.</p>' +
         '<button type="button" id="ql-print-sheet" style="display:block;margin:0 0 12px;background:none;color:var(--navy-soft);text-decoration:underline;font-size:12px;font-weight:600;">Imprimir hoja en blanco para rellenar a mano</button>' +
         '<div id="ql-items"></div>' +
         '<details class="ql-paste">' +
@@ -665,7 +666,8 @@
       return '<div class="ql-grid-row' + (blank ? ' ql-blank' : '') + '"' + (blank ? ' data-blank="1"' : ' data-id="' + it.id + '"') + '>' +
         '<input type="date" class="g-d" value="' + it.date + '" aria-label="Fecha">' +
         '<select class="g-c" aria-label="Categoría">' + catOptions(it.category) + '</select>' +
-        '<input type="text" class="g-t" value="' + escapeHtml(it.title || "").replace(/"/g, "&quot;") + '" placeholder="' + (blank ? 'Escribe aquí un apunte nuevo…' : '') + '" autocomplete="off" aria-label="Apunte">' +
+        '<input type="text" class="g-t" value="' + escapeHtml(it.title || "").replace(/"/g, "&quot;") + '" placeholder="' + (blank ? 'Artículo…' : '') + '" autocomplete="off" aria-label="Artículo">' +
+        '<input type="text" class="g-k" value="' + escapeHtml(it.code || "").replace(/"/g, "&quot;") + '" placeholder="' + (blank ? 'Código' : '') + '" autocomplete="off" inputmode="numeric" aria-label="Código">' +
         (blank ? '<span></span>' : '<button type="button" class="ql-del" title="Quitar fila">' + iconX() + '</button>') +
       '</div>';
     }
@@ -677,7 +679,7 @@
       var container = document.getElementById("ql-items");
       var importBtn = document.getElementById("ql-import");
       container.innerHTML = '<div class="ql-grid">' +
-        '<div class="ql-grid-head"><div>Fecha</div><div>Categoría</div><div>Apunte</div><div></div></div>' +
+        '<div class="ql-grid-head"><div>Fecha</div><div>Categoría</div><div>Artículo</div><div>Código</div><div></div></div>' +
         list.map(function (it) { return rowHtml(it, false); }).join("") +
         rowHtml({ date: lastDate, category: lastCat, title: "" }, true) +
       '</div>';
@@ -689,20 +691,20 @@
 
       container.querySelectorAll(".ql-grid-row").forEach(function (row) {
         var blank = row.getAttribute("data-blank") === "1";
-        var dEl = row.querySelector(".g-d"), cEl = row.querySelector(".g-c"), tEl = row.querySelector(".g-t");
+        var dEl = row.querySelector(".g-d"), cEl = row.querySelector(".g-c"), tEl = row.querySelector(".g-t"), kEl = row.querySelector(".g-k");
         function commit() {
           var all = loadQuickList();
           if (blank) {
             var title = tEl.value.trim();
             lastDate = dEl.value || todayKey(); lastCat = cEl.value;
             if (!title) return;
-            all.push({ id: uid(), title: title, date: lastDate, category: lastCat });
+            all.push({ id: uid(), title: title, date: lastDate, category: lastCat, code: kEl.value.trim() });
             saveQuickList(all);
             renderItems(true);
           } else {
             var id = row.getAttribute("data-id");
             all.forEach(function (x) {
-              if (x.id === id) { x.title = tEl.value.trim() || x.title; x.date = dEl.value || x.date; x.category = cEl.value; }
+              if (x.id === id) { x.title = tEl.value.trim() || x.title; x.date = dEl.value || x.date; x.category = cEl.value; x.code = kEl.value.trim(); }
             });
             saveQuickList(all);
           }
@@ -710,7 +712,9 @@
         dEl.addEventListener("change", function () { if (blank) { lastDate = dEl.value || todayKey(); } else { commit(); } });
         cEl.addEventListener("change", function () { if (blank) { lastCat = cEl.value; } else { commit(); } });
         tEl.addEventListener("change", commit);
-        tEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); tEl.blur(); } });
+        kEl.addEventListener("change", commit);
+        function enterBlur(e) { if (e.key === "Enter") { e.preventDefault(); e.target.blur(); } }
+        tEl.addEventListener("keydown", enterBlur); kEl.addEventListener("keydown", enterBlur);
         var del = row.querySelector(".ql-del");
         if (del) del.addEventListener("click", function () {
           var id = row.getAttribute("data-id");
@@ -793,10 +797,10 @@
     document.getElementById("ql-print-sheet").addEventListener("click", printBlankSheet);
 
     document.getElementById("ql-template").addEventListener("click", function () {
-      var csv = "\uFEFFFecha;Categoría;Apunte\r\n" +
-        "15/10;Reducción;Yogures bajar precio 50%\r\n" +
-        "17/10;Info;Retirar leche de la venta\r\n" +
-        "20/10;Cita;Proveedor a las 10:00\r\n";
+      var csv = "\uFEFFFecha;Categoría;Artículo;Código\r\n" +
+        "15/10;Reducción;Yogures naturales;1234567\r\n" +
+        "17/10;Info;Retirar leche;7654321\r\n" +
+        "20/10;Cita;Proveedor a las 10:00;\r\n";
       var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       var a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -808,7 +812,7 @@
       var list = loadQuickList();
       if (list.length === 0) return;
       var newEvents = list.map(function (it) {
-        return { id: uid(), date: it.date, time: "", category: it.category, title: it.title, notes: "", alertDays: 2, checklist: [], photo: null };
+        return { id: uid(), date: it.date, time: "", category: it.category, title: it.title, notes: it.code ? "Código: " + it.code : "", alertDays: 2, checklist: [], photo: null };
       });
       state.events = state.events.concat(newEvents);
       saveEvents(state.events);
